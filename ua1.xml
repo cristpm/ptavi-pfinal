@@ -1,0 +1,8 @@
+<config>
+  <acount username="" passwd=""/>
+  <uaserver ip="" puerto=""/>
+  <rtpaudio puerto=""/>
+  <regproxy ip="" puerto=""/>
+  <log path=""/>
+  <audio path=""/>
+</config>
