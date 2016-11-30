@@ -26,7 +26,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 # aEjecutar es un string con lo que se ha de ejecutar en la
                 # shell
                 ##aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio
-                print("Vamos a ejecutar", aEjecutar)
+                print("Vamos a ejecutar RTP"#, aEjecutar)
                 ##os.system(aEjecutar)
             else:
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
