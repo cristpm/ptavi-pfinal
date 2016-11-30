@@ -25,9 +25,9 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             if METODO == 'ACK':
                 # aEjecutar es un string con lo que se ha de ejecutar en la
                 # shell
-                aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio
+                ##aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio
                 print("Vamos a ejecutar", aEjecutar)
-                os.system(aEjecutar)
+                ##os.system(aEjecutar)
             else:
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
         elif METODO not in METODOS:
@@ -38,14 +38,14 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
 if __name__ == "__main__":
     try:
-        IP = sys.argv[1]
-        PORT = int(sys.argv[2])
-        fichero_audio = sys.argv[3]
-        if not os.path.isfile(fichero_audio):
-            sys.exit(fichero_audio + ": File not found")
-        else:
-            serv = socketserver.UDPServer((IP, PORT), ServerHandler)
-            print("Listening...")
+        IP = '127.0.0.1'
+        PORT = int(sys.argv[1])
+        ##fichero_audio = sys.argv[3]
+        ##if not os.path.isfile(fichero_audio):
+            ##sys.exit(fichero_audio + ": File not found")
+        ##else:
+        serv = socketserver.UDPServer((IP, PORT), ServerHandler)
+        print("Listening...")
     except IndexError:
         sys.exit("Usage: python server.py IP port audio_file")
     try:

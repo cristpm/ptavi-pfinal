@@ -6,7 +6,7 @@ import socketserver
 import sys
 import time
 import json
-
+import socket
 
 class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     """Echo server Register  class."""
@@ -14,34 +14,85 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     clientes = []
 
     def handle(self):  # TRATAMOS EL SOCKET COMO UN FICHERO
-        """Handle Register SIP."""
-        self.json2registered()
+        """Handle Register/Proxy SIP."""
+        ##self.json2registered()
         self.expiration()
+        line = self.rfile.read()
+        data = line.decode('utf-8')
+        print("El cliente nos manda:") 
+        print(data)
+        METODO = data.split(' ')[0]
+        METODOS = ['REGISTER', 'INVITE', 'BYE', 'ACK']
+        if METODO in METODOS:
+            if METODO == 'REGISTER':
+                self.Register(data)
+                self.register2json()
+                self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+            else:
+                if self.Client_Registrado(data) == "TRUE":
+                    self.Proxy(data)    
+                else:    
+                    self.wfile.write(b"SIP/2.0 404 User Not Found\r\n\r\n")
+                    print('Cliente no registrado no se puede reenviar')
+        elif METODO not in METODOS:
+            self.wfile.write(b"SIP/2.0 405 Method Not Allowed\r\n\r\n")
+        else:
+            self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
+            
+    def Proxy(self, mensaje):
+        Dir_SIP = mensaje.split(' ')[1][4:]
+        for user in self.clientes:
+            if user[0] == Dir_SIP:
+                client = user# datos del cliente al que renviamos el mensaje
+        IP = client[1]["IP"]
+        PUERTO = client[1]["Puerto"]
+        # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
+        my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        my_socket.connect((IP, PUERTO))
+        my_socket.send(bytes(mensaje, 'utf-8'))
+        print('REnviando -- ')
+        print(mensaje)
+        respuesta = my_socket.recv(1024)
+        self.wfile.write(respuesta)
+        print('REnviando respuesta -- ')
+        print(mensaje)
+            
+                
+    def Register(self, mensaje):
+        """Gestionamos que hacer cuando un usuario nos envia un Register"""
         Ip_client = self.client_address[0]
-        P_client = self.client_address[1]
-        print('TUS DATOS SON:', "IP = ", Ip_client, "Puerto = ", P_client)
-        for line in self.rfile:  # leemos el socket
-            l = line.decode('utf-8')
-            print(l)
-            if l.split(' ')[0] == 'REGISTER':
-                direc = l.split(' ')[1][4:]
-            if l.split(' ')[0] == 'Expires:':
-                t = int(l.split(' ')[1][0:-2])
-        exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() + t))
-        client = [direc, {"address": Ip_client, "expires": exp}]
-        if t == 0:
+        client_Puert_A = mensaje.split(' ')[1]
+        Dir_SIP = client_Puert_A.split(':')[1]
+        Puert_A = int(client_Puert_A.split(':')[2])
+        
+        Expires = int(mensaje.split(' ')[3][0:-4])
+        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() + Expires))
+        client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A , "Time_exp": Time_exp}]
+        if Expires == 0:
             for user in self.clientes:
-                if user[0] == direc:
+                if user[0] == Dir_SIP:
                     self.clientes.remove(user)
-        if t > 0:
+        if Expires > 0:
             for user in self.clientes:
-                if user[0] == direc:
+                if user[0] == Dir_SIP:
                     self.clientes.remove(user)
             self.clientes.append(client)
-        self.register2json()
-        self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
-        print("CLIENTES ==>", self.clientes)
-
+        print(self.clientes)
+            
+    def Client_Registrado(self, mensaje):
+        Dir_SIP = mensaje.split(' ')[1][4:]
+        print(Dir_SIP)
+        s = 'FALSE'
+        if len(self.clientes) > 0:
+            for user in self.clientes:
+                print(user)
+                if user[0] == Dir_SIP:
+                    s = 'TRUE'
+        return s 
+                
+        
+        
     def register2json(self):
         """passe customer lists to json."""
         json.dump(self.clientes, open('registered.json', 'w'), indent=4)
@@ -50,7 +101,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         """remove clients expired."""
         gmt = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
         for user in self.clientes:
-            if gmt > user[1]['expires']:
+            if gmt > user[1]["Time_exp"]:
                 self.clientes.remove(user)
 
     def json2registered(self):
@@ -66,7 +117,7 @@ if __name__ == "__main__":
 
     PORT = int(sys.argv[1])
     serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
-    print("Lanzando servidor UDP de eco...")
+    print("Lanzando servidor PROXY/REGISTER...")
     try:
         serv.serve_forever()
     except KeyboardInterrupt:
