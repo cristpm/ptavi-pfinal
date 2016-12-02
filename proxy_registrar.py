@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-"""Servidor sobre UDP implementado como Register SIP."""
+"""Servidor sobre UDP implementado como Register SIP y PROXY."""
 
 import socketserver
 import sys
