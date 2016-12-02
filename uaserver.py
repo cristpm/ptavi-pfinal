@@ -8,6 +8,40 @@ import socketserver
 import sys
 import os
 
+class XMLHandler(ContentHandler):
+    """
+    Clase para manejar smil
+    """
+
+    def __init__(self):
+        """
+        Constructor. Inicializamos las variables
+        """
+        self.misdatos = {}
+
+    def startElement(self, name, attrs):
+        """
+        Método que se llama cuando se abre una etiqueta
+        """
+        dat_atrib = {}
+        account = ['username', 'passwd']
+        uaserver = ['ip', 'puerto']
+        rtpaudio = ['puerto']
+        regproxy = ['ip', 'puerto']
+        log = ['path']
+        audio = ['path']
+        etiquetas = {'acount': account, 'uaserver': uaserver, 'rtpaudio': 
+                    rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio}
+        if name in etiquetas:#siel nombre de la entique esta en el dic etiquetas
+            for atributo in etiquetas[name]:
+            #etiquetas[name] es una lista con los atributos de cada etiqueta
+                if attrs.get(atributo, "") != "":
+                    dat_atrib[atributo] = attrs.get(atributo, "")
+            self.misdatos[name] = dat_atrib
+
+    def get_tags(self):
+        return self.misdatos
+
 class ServerHandler(socketserver.DatagramRequestHandler):
     """Server SIP."""
 
@@ -39,8 +73,15 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
 if __name__ == "__main__":
     try:
-        IP = '127.0.0.1'#provicional IP del UA (parte servidora del clientes)
-        PORT = int(sys.argv[1])# provisional puerto de escucha del UA (parte servidora del clientes)
+        parser = make_parser()
+        cHandler = XMLHandler()
+        parser.setContentHandler(cHandler)
+        parser.parse(open(sys.argv[1]))
+        miXML = cHandler.get_tags()
+        
+        #IP Y Puerto de escucha del UA server 
+        IP = miXML['uaserver']['ip']
+        PORT = int(miXML['uaserver']['puerto'])
         ##fichero_audio = sys.argv[3]
         ##if not os.path.isfile(fichero_audio):
             ##sys.exit(fichero_audio + ": File not found")

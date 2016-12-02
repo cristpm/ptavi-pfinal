@@ -4,49 +4,18 @@
 
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+import uaserver
 import socket
 import sys
 
-class XMLHandler(ContentHandler):
-    """
-    Clase para manejar smil
-    """
 
-    def __init__(self):
-        """
-        Constructor. Inicializamos las variables
-        """
-        self.misdatos = {}
-
-    def startElement(self, name, attrs):
-        """
-        Método que se llama cuando se abre una etiqueta
-        """
-        dat_atrib = {}
-        account = ['username', 'passwd']
-        uaserver = ['ip', 'puerto']
-        rtpaudio = ['puerto']
-        regproxy = ['ip', 'puerto']
-        log = ['path']
-        audio = ['path']
-        etiquetas = {'acount': account, 'uaserver': uaserver, 'rtpaudio': 
-                    rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio}
-        if name in etiquetas:#siel nombre de la entique esta en el dic etiquetas
-            for atributo in etiquetas[name]:
-            #etiquetas[name] es una lista con los atributos de cada etiqueta
-                if attrs.get(atributo, "") != "":
-                    dat_atrib[atributo] = attrs.get(atributo, "")
-            self.misdatos[name] = dat_atrib
-
-    def get_tags(self):
-        return self.misdatos
 
 if __name__ == "__main__":
     """
     Programa principal
     """
     parser = make_parser()
-    cHandler = XMLHandler()
+    cHandler = uaserver.XMLHandler()
     parser.setContentHandler(cHandler)
     parser.parse(open(sys.argv[1]))
     miXML = cHandler.get_tags()
