@@ -19,43 +19,45 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         self.expiration()
         line = self.rfile.read()
         data = line.decode('utf-8')
-        print("El cliente nos manda:") 
+        print("'Recibido --") 
         print(data)
         METODO = data.split(' ')[0]
         METODOS = ['REGISTER', 'INVITE', 'BYE', 'ACK']
         if METODO in METODOS:
             if METODO == 'REGISTER':
-                self.Register(data)
+                self.Register(data)# Actuamos como un servidor SIP/REGISTER
                 self.register2json()
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
             else:
                 if self.Client_Registrado(data) == "TRUE":
-                    self.Proxy(data)    
+                    self.Proxy(data)# Actuamos como un servidor PROXY   
                 else:    
                     self.wfile.write(b"SIP/2.0 404 User Not Found\r\n\r\n")
-                    print('Cliente no registrado no se puede reenviar')
         elif METODO not in METODOS:
             self.wfile.write(b"SIP/2.0 405 Method Not Allowed\r\n\r\n")
         else:
             self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
             
     def Proxy(self, mensaje):
+        """Buscamos el UA al que renviar la informacion la renvia y espera"""
+        """respuesta para enviarla al UA que inicio la peticion"""
         Dir_SIP = mensaje.split(' ')[1][4:]
         for user in self.clientes:
             if user[0] == Dir_SIP:
                 client = user# datos del cliente al que renviamos el mensaje
         IP = client[1]["IP"]
         PUERTO = client[1]["Puerto"]
-        # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
+        # Creamos el socket,lo configuramos y lo atamos a un servidor/puerto UA
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         my_socket.connect((IP, PUERTO))
+        print('Renviando -- ')
         my_socket.send(bytes(mensaje, 'utf-8'))
-        print('REnviando -- ')
         print(mensaje)
         respuesta = my_socket.recv(1024)
+        print('Enviando respuesta -- ')
         self.wfile.write(respuesta)
-        print('REnviando respuesta -- ')
+        
         print(mensaje)
             
                 
@@ -81,17 +83,15 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         print(self.clientes)
             
     def Client_Registrado(self, mensaje):
+        """Funcion que devuelve un Booleano para comprobar el registro del cliente"""
         Dir_SIP = mensaje.split(' ')[1][4:]
-        print(Dir_SIP)
-        s = 'FALSE'
+        S = 'FALSE'
         if len(self.clientes) > 0:
             for user in self.clientes:
                 print(user)
                 if user[0] == Dir_SIP:
-                    s = 'TRUE'
-        return s 
-                
-        
+                    S = 'TRUE'
+        return S      
         
     def register2json(self):
         """passe customer lists to json."""
@@ -115,7 +115,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 
 if __name__ == "__main__":
 
-    PORT = int(sys.argv[1])
+    IP = '127.0.0.1'#provicional IP del PROXY/REGISTER
+    PORT = int(sys.argv[1])# provisional puerto de PROXY/REGISTER
     serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
     print("Lanzando servidor PROXY/REGISTER...")
     try:

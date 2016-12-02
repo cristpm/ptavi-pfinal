@@ -14,7 +14,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         """Handle Server SIP."""
         line = self.rfile.read()
         data = line.decode('utf-8')
-        print("El cliente nos manda:")
+        print("'Recibido -- ")
         print(data)
         METODO = data.split(' ')[0]
         METODOS = ['INVITE', 'BYE', 'ACK']
@@ -38,8 +38,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
 if __name__ == "__main__":
     try:
-        IP = '127.0.0.1'
-        PORT = int(sys.argv[1])
+        IP = '127.0.0.1'#provicional IP del UA (parte servidora del clientes)
+        PORT = int(sys.argv[1])# provisional puerto de escucha del UA (parte servidora del clientes)
         ##fichero_audio = sys.argv[3]
         ##if not os.path.isfile(fichero_audio):
             ##sys.exit(fichero_audio + ": File not found")
