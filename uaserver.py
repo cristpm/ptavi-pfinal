@@ -24,14 +24,21 @@ class XMLHandler(ContentHandler):
         Método que se llama cuando se abre una etiqueta
         """
         dat_atrib = {}
+        #Etiquetas UA
         account = ['username', 'passwd']
         uaserver = ['ip', 'puerto']
         rtpaudio = ['puerto']
         regproxy = ['ip', 'puerto']
         log = ['path']
         audio = ['path']
+        #eiquetas PROXY/REGISTER - log
+        server = ['name', 'ip', 'puerto']
+        database = ['path', 'passwdpath']
+        
+        
         etiquetas = {'acount': account, 'uaserver': uaserver, 'rtpaudio': 
-                    rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio}
+                    rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio,
+                    'server': server, 'database': database}
         if name in etiquetas:#siel nombre de la entique esta en el dic etiquetas
             for atributo in etiquetas[name]:
             #etiquetas[name] es una lista con los atributos de cada etiqueta

@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     # Contenido que vamos a enviar
     if METODO == 'REGISTER':
-        MENSAJE = METODO + ' sip:penny@bigbang.org:' + PE + ' SIP/2.0\r\nExpires: ' + OPCION + '\r\n'    
+        MENSAJE = METODO + ' ' + miXML['acount']['username'] + PE + ' SIP/2.0\r\nExpires: ' + OPCION + '\r\n'    
     else:
         MENSAJE = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
     my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')

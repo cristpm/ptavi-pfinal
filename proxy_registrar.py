@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 """Servidor sobre UDP implementado como Register SIP y PROXY."""
 
+from xml.sax import make_parser
+from xml.sax.handler import ContentHandler
 import socketserver
+import uaserver
 import sys
 import time
 import json
@@ -114,11 +117,15 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 
 
 if __name__ == "__main__":
-
-    IP = '127.0.0.1'#provicional IP del PROXY/REGISTER
-    PORT = int(sys.argv[1])# provisional puerto de PROXY/REGISTER
+    parser = make_parser()
+    cHandler = uaserver.XMLHandler()
+    parser.setContentHandler(cHandler)
+    parser.parse(open(sys.argv[1]))
+    miXML = cHandler.get_tags()
+    IP = miXML['server']['ip']
+    PORT = int(miXML['server']['puerto'])#
     serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
-    print("Lanzando servidor PROXY/REGISTER...")
+    print('Lanzando servidor PROXY/REGISTER '+ miXML['server']['name'] + ' ...')
     try:
         serv.serve_forever()
     except KeyboardInterrupt:
