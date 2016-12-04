@@ -20,12 +20,15 @@ if __name__ == "__main__":
     parser.parse(open(sys.argv[1]))
     miXML = cHandler.get_tags()
     METODO = sys.argv[2]
-    OPCION = sys.argv[3]# Direccion sip o tiempo de expiracion
+    OPCION = sys.argv[3]# Direccion sip del receptor o tiempo de expiracion
+    
+    #Direccion SIP del UA 
+    Sip_E = miXML['acount']['username']
     
     #Puerto de escucha del UA server IP?????
     PE = miXML['uaserver']['puerto']
     
-    #Dirección IP, Puerto del servidor PROXY.
+    #Dirección IP y Puerto del servidor PROXY.
     IP = miXML['regproxy']['ip']
     PORT_Proxy = int(miXML['regproxy']['puerto'])
 
@@ -36,9 +39,15 @@ if __name__ == "__main__":
 
     # Contenido que vamos a enviar
     if METODO == 'REGISTER':
-        MENSAJE = METODO + ' ' + miXML['acount']['username'] + PE + ' SIP/2.0\r\nExpires: ' + OPCION + '\r\n'    
+        MENSAJE = METODO + ' sip:' + Sip_E + ':' + PE + ' SIP/2.0\r\nExpires: '
+                    + OPCION + '\r\n'
     else:
         MENSAJE = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
+        if METODO = 'INVITE':
+            O = '0=' + Sip_E + ' ' + IP + '\r\n'
+            P_RTP = miXML['rtpaudio']['puerto']
+            SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio' + P_RTP + 'RTP'
+            MENSAJE = MENSAJE + 'Content-Type: application/sdp\r\n\r\n' + SDP
     my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
     print('Enviando -- ')
     print(MENSAJE)

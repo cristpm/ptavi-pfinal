@@ -96,7 +96,7 @@ if __name__ == "__main__":
         serv = socketserver.UDPServer((IP, PORT), ServerHandler)
         print("Listening...")
     except IndexError:
-        sys.exit("Usage: python server.py IP port audio_file")
+        sys.exit("Usage: python uaserver.py config")
     try:
         # bucle esperando peticiones
         serv.serve_forever()
