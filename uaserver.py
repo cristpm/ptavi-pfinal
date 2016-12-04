@@ -10,7 +10,7 @@ import os
 
 class XMLHandler(ContentHandler):
     """
-    Clase para manejar smil
+    Clase para manejar XML
     """
 
     def __init__(self):
@@ -64,7 +64,9 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             if METODO == 'INVITE':
                 self.wfile.write(b"SIP/2.0 100 Trying\r\n\r\n")
                 self.wfile.write(b"SIP/2.0 180 Ring\r\n\r\n")
-            if METODO == 'ACK':
+                self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+                #añadir SDP EN 200OK
+            elif METODO == 'ACK':
                 # aEjecutar es un string con lo que se ha de ejecutar en la
                 # shell
                 ##aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio

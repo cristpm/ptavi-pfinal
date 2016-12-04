@@ -60,8 +60,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         respuesta = my_socket.recv(1024)
         print('Enviando respuesta -- ')
         self.wfile.write(respuesta)
-        
-        print(mensaje)
+        print(respuesta)
+        my_socket.close()
             
                 
     def Register(self, mensaje):
@@ -83,7 +83,6 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 if user[0] == Dir_SIP:
                     self.clientes.remove(user)
             self.clientes.append(client)
-        print(self.clientes)
             
     def Client_Registrado(self, mensaje):
         """Funcion que devuelve un Booleano para comprobar el registro del cliente"""
@@ -91,7 +90,6 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         S = 'FALSE'
         if len(self.clientes) > 0:
             for user in self.clientes:
-                print(user)
                 if user[0] == Dir_SIP:
                     S = 'TRUE'
         return S      
@@ -117,15 +115,18 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 
 
 if __name__ == "__main__":
-    parser = make_parser()
-    cHandler = uaserver.XMLHandler()
-    parser.setContentHandler(cHandler)
-    parser.parse(open(sys.argv[1]))
-    miXML = cHandler.get_tags()
-    IP = miXML['server']['ip']
-    PORT = int(miXML['server']['puerto'])#
-    serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
-    print('Lanzando servidor PROXY/REGISTER '+ miXML['server']['name'] + ' ...')
+    try:
+        parser = make_parser()
+        cHandler = uaserver.XMLHandler()
+        parser.setContentHandler(cHandler)
+        parser.parse(open(sys.argv[1]))
+        miXML = cHandler.get_tags()
+        IP = miXML['server']['ip']
+        PORT = int(miXML['server']['puerto'])#
+        serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
+        print('Server MiServidorBigBang listening at port ' + str(PORT) + '...')
+    except IndexError:
+        sys.exit("Usage: python proxy_registrar.py config")
     try:
         serv.serve_forever()
     except KeyboardInterrupt:

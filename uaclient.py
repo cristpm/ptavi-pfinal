@@ -14,13 +14,16 @@ if __name__ == "__main__":
     """
     Programa principal
     """
-    parser = make_parser()
-    cHandler = uaserver.XMLHandler()
-    parser.setContentHandler(cHandler)
-    parser.parse(open(sys.argv[1]))
-    miXML = cHandler.get_tags()
-    METODO = sys.argv[2]
-    OPCION = sys.argv[3]# Direccion sip del receptor o tiempo de expiracion
+    try:
+        parser = make_parser()
+        cHandler = uaserver.XMLHandler()
+        parser.setContentHandler(cHandler)
+        parser.parse(open(sys.argv[1]))
+        miXML = cHandler.get_tags()
+        METODO = sys.argv[2]
+        OPCION = sys.argv[3]# Direccion sip del receptor o tiempo de expiracion
+    except IndexError:
+        sys.exit("Usage: python uaclient.py config method option")
     
     #Direccion SIP del UA 
     Sip_E = miXML['acount']['username']
@@ -39,11 +42,10 @@ if __name__ == "__main__":
 
     # Contenido que vamos a enviar
     if METODO == 'REGISTER':
-        MENSAJE = METODO + ' sip:' + Sip_E + ':' + PE + ' SIP/2.0\r\nExpires: '
-                    + OPCION + '\r\n'
+        MENSAJE = METODO + ' sip:' + Sip_E + ':' + PE + ' SIP/2.0\r\nExpires: ' + OPCION + '\r\n'
     else:
         MENSAJE = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
-        if METODO = 'INVITE':
+        if METODO == 'INVITE':
             O = '0=' + Sip_E + ' ' + IP + '\r\n'
             P_RTP = miXML['rtpaudio']['puerto']
             SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio' + P_RTP + 'RTP'
@@ -53,14 +55,17 @@ if __name__ == "__main__":
     print(MENSAJE)
 
     # Contenido que recibimos de respuesta
-    data = my_socket.recv(1024)
-    respuesta = data.decode('utf-8')
-    print('Recibido -- ')
-    print(respuesta)
-    num_respuesta = respuesta.split(' ')[1]
-    if METODO == 'INVITE' and num_respuesta != '404':
-        MENSAJE = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
-        my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
-        print('Enviando -- ')
-        print(MENSAJE)
-    my_socket.close()
+    try:
+        data = my_socket.recv(1024)
+        respuesta = data.decode('utf-8')
+        print('Recibido -- ')
+        print(respuesta)
+        num_respuesta = respuesta.split(' ')[1]
+        if METODO == 'INVITE' and num_respuesta != '404':
+            MENSAJE = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
+            my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
+            print('Enviando -- ')
+            print(MENSAJE)
+        my_socket.close()
+    except ConnectionRefusedError:
+        sys.exit("Intento de conexion fallido")
