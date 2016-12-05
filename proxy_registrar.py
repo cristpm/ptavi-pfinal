@@ -10,12 +10,14 @@ import sys
 import time
 import json
 import socket
+import random
+import hashlib
 
 class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     """Echo server Register  class."""
 
     clientes = []
-
+    respuestas= {}
     def handle(self):  # TRATAMOS EL SOCKET COMO UN FICHERO
         """Handle Register/Proxy SIP."""
         ##self.json2registered()
@@ -28,10 +30,31 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         METODOS = ['REGISTER', 'INVITE', 'BYE', 'ACK']
         if METODO in METODOS:
             if METODO == 'REGISTER':
-                self.Register(data)# Actuamos como un servidor SIP/REGISTER
-                self.register2json()
-                self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+                client_Puert_A = data.split(' ')[1]
+                Dir_SIP = client_Puert_A.split(':')[1]
+                if len(data.split(' ')) <= 4:
+                    nonce = str(random.randint(1, 898989898798989898989))
+                    Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
+                    self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" + bytes(Cabecera, 'utf-8') + b"\r\n")
+                    #guardamos la respuesta de este cliente para conprobar la 
+                    #vuelta
+                    r = hashlib.md5()
+                    r.update(b'superman') # contraseña provicional
+                    r.update(bytes(nonce, 'utf-8'))
+                    self.respuestas[Dir_SIP] = r.hexdigest()
+                    print(self.respuestas)
+                else:
+                    #response que recibimos de vuelta
+                    response = data.split('"')[-2]
+                    print(response, Dir_SIP)
+                    if response == self.respuestas[Dir_SIP]:
+                        self.Register(data)# Registramos al cliente
+                        self.register2json()
+                        self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+                    else:
+                        self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
             else:
+                print('segundo register')
                 if self.Client_Registrado(data) == "TRUE":
                     self.Proxy(data)# Actuamos como un servidor PROXY   
                 else:    
@@ -65,13 +88,12 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
             
                 
     def Register(self, mensaje):
-        """Gestionamos que hacer cuando un usuario nos envia un Register"""
+        """Gestionamos que hacer cuando un usuario nos envia un Register valido"""
         Ip_client = self.client_address[0]
         client_Puert_A = mensaje.split(' ')[1]
         Dir_SIP = client_Puert_A.split(':')[1]
         Puert_A = int(client_Puert_A.split(':')[2])
-        
-        Expires = int(mensaje.split(' ')[3][0:-4])
+        Expires = int(mensaje.split('\r\n')[1][9:])
         Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() + Expires))
         client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A , "Time_exp": Time_exp}]
         if Expires == 0:
@@ -83,6 +105,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 if user[0] == Dir_SIP:
                     self.clientes.remove(user)
             self.clientes.append(client)
+        print(self.clientes)
             
     def Client_Registrado(self, mensaje):
         """Funcion que devuelve un Booleano para comprobar el registro del cliente"""
