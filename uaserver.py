@@ -64,8 +64,12 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             if METODO == 'INVITE':
                 self.wfile.write(b"SIP/2.0 100 Trying\r\n\r\n")
                 self.wfile.write(b"SIP/2.0 180 Ring\r\n\r\n")
-                self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
-                #añadir SDP EN 200OK
+                #SDP de vuelta
+                O = '0=' + Sip_E + ' ' + IP + '\r\n'
+                P_RTP = miXML['rtpaudio']['puerto']
+                Cabecera = 'Content-Type: application/sdp\r\n\r\n'
+                SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio' + P_RTP + 'RTP'
+                self.wfile.write(b("SIP/2.0 200 OK\r\n" + Cabecera + SDP + '\r\n'))     
             elif METODO == 'ACK':
                 # aEjecutar es un string con lo que se ha de ejecutar en la
                 # shell
@@ -88,7 +92,8 @@ if __name__ == "__main__":
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
         
-        #IP Y Puerto de escucha del UA server 
+        #Direccion SIP IP Y Puerto de escucha del UA server
+        Sip_E = miXML['acount']['username'] 
         IP = miXML['uaserver']['ip']
         PORT = int(miXML['uaserver']['puerto'])
         ##fichero_audio = sys.argv[3]

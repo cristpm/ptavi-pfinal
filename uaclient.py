@@ -29,16 +29,17 @@ if __name__ == "__main__":
     Sip_E = miXML['acount']['username']
     
     #Puerto de escucha del UA server IP?????
+    IP = miXML['uaserver']['ip']
     PE = miXML['uaserver']['puerto']
     
     #Dirección IP y Puerto del servidor PROXY.
-    IP = miXML['regproxy']['ip']
+    IP_Proxy = miXML['regproxy']['ip']
     PORT_Proxy = int(miXML['regproxy']['puerto'])
 
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto PROXY
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    my_socket.connect((IP, PORT_Proxy))
+    my_socket.connect((IP_PROXY, PORT_Proxy))
 
     # Contenido que vamos a enviar
     if METODO == 'REGISTER':
