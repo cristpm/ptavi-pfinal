@@ -13,64 +13,43 @@ import socket
 import random
 import hashlib
 
+
 class SIPRegisterHandler(socketserver.DatagramRequestHandler):
-    """Echo server Register  class."""
+    """Echo server Register Proxy class."""
 
     clientes = []
-    respuestas= {}
+    respuestas = {}
+
     def handle(self):  # TRATAMOS EL SOCKET COMO UN FICHERO
         """Handle Register/Proxy SIP."""
-        ##self.json2registered()
+        # self.json2registered()
         self.expiration()
         line = self.rfile.read()
         data = line.decode('utf-8')
-        print("'Recibido --") 
+        print("'Recibido --")
         print(data)
         METODO = data.split(' ')[0]
         METODOS = ['REGISTER', 'INVITE', 'BYE', 'ACK']
         if METODO in METODOS:
             if METODO == 'REGISTER':
-                client_Puert_A = data.split(' ')[1]
-                Dir_SIP = client_Puert_A.split(':')[1]
-                if len(data.split(' ')) <= 4:
-                    nonce = str(random.randint(1, 898989898798989898989))
-                    Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
-                    self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" + bytes(Cabecera, 'utf-8') + b"\r\n")
-                    #guardamos la respuesta de este cliente para conprobar la 
-                    #vuelta
-                    r = hashlib.md5()
-                    r.update(b'superman') # contraseña provicional
-                    r.update(bytes(nonce, 'utf-8'))
-                    self.respuestas[Dir_SIP] = r.hexdigest()
-                    print(self.respuestas)
-                else:
-                    #response que recibimos de vuelta
-                    response = data.split('"')[-2]
-                    print(response, Dir_SIP)
-                    if response == self.respuestas[Dir_SIP]:
-                        self.Register(data)# Registramos al cliente
-                        self.register2json()
-                        self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
-                    else:
-                        self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
+                self.Autentificacion_Register(data)
             else:
-                print('segundo register')
                 if self.Client_Registrado(data) == "TRUE":
-                    self.Proxy(data)# Actuamos como un servidor PROXY   
-                else:    
+                    self.Server_Proxy(data)
+                else:
                     self.wfile.write(b"SIP/2.0 404 User Not Found\r\n\r\n")
         elif METODO not in METODOS:
             self.wfile.write(b"SIP/2.0 405 Method Not Allowed\r\n\r\n")
         else:
             self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
-            
-    def Proxy(self, mensaje):
+
+    def Server_Proxy(self, mensaje):
         """Buscamos el UA al que renviar la informacion la renvia y espera"""
         """respuesta para enviarla al UA que inicio la peticion"""
         Dir_SIP = mensaje.split(' ')[1][4:]
         for user in self.clientes:
             if user[0] == Dir_SIP:
-                client = user# datos del cliente al que renviamos el mensaje
+                client = user
         IP = client[1]["IP"]
         PUERTO = client[1]["Puerto"]
         # Creamos el socket,lo configuramos y lo atamos a un servidor/puerto UA
@@ -85,8 +64,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         self.wfile.write(respuesta)
         print(respuesta)
         my_socket.close()
-            
-                
+     
     def Register(self, mensaje):
         """Gestionamos que hacer cuando un usuario nos envia un Register valido"""
         Ip_client = self.client_address[0]
@@ -95,7 +73,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         Puert_A = int(client_Puert_A.split(':')[2])
         Expires = int(mensaje.split('\r\n')[1][9:])
         Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() + Expires))
-        client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A , "Time_exp": Time_exp}]
+        client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A, "Time_exp": Time_exp}]
         if Expires == 0:
             for user in self.clientes:
                 if user[0] == Dir_SIP:
@@ -106,17 +84,41 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                     self.clientes.remove(user)
             self.clientes.append(client)
         print(self.clientes)
-            
+
     def Client_Registrado(self, mensaje):
-        """Funcion que devuelve un Booleano para comprobar el registro del cliente"""
+        """Devuelve un String para comprobar el registro del cliente"""
         Dir_SIP = mensaje.split(' ')[1][4:]
         S = 'FALSE'
         if len(self.clientes) > 0:
             for user in self.clientes:
                 if user[0] == Dir_SIP:
                     S = 'TRUE'
-        return S      
-        
+        return S     
+
+    def Autentificacion_Register(self, data):
+        """Realiza todo el proceso de un Register"""
+        client_Puert_A = data.split(' ')[1]
+        Dir_SIP = client_Puert_A.split(':')[1]
+        if len(data.split(' ')) <= 4:
+        # Si es el primer Register pedimos autentificacion
+            nonce = str(random.randint(1, 898989898798989898989))
+            Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
+            self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" + bytes(Cabecera, 'utf-8') + b"\r\n")
+            # guardamos el response que tendriamos que recibir
+            r = hashlib.md5()
+            r.update(b'superman')# contraseña provicional
+            r.update(bytes(nonce, 'utf-8'))
+            self.respuestas[Dir_SIP] = r.hexdigest()
+        else:
+        # Si nos llega el segundo register con su response
+            response = data.split('"')[-2]
+            if response == self.respuestas[Dir_SIP]:
+                self.Register(data)# Registramos al cliente
+                self.register2json()
+                self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+            else:
+                self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
+
     def register2json(self):
         """passe customer lists to json."""
         json.dump(self.clientes, open('registered.json', 'w'), indent=4)
@@ -145,7 +147,7 @@ if __name__ == "__main__":
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
         IP = miXML['server']['ip']
-        PORT = int(miXML['server']['puerto'])#
+        PORT = int(miXML['server']['puerto'])
         serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
         print('Server MiServidorBigBang listening at port ' + str(PORT) + '...')
     except IndexError:

@@ -8,6 +8,7 @@ import socketserver
 import sys
 import os
 
+
 class XMLHandler(ContentHandler):
     """
     Clase para manejar XML
@@ -24,30 +25,29 @@ class XMLHandler(ContentHandler):
         Método que se llama cuando se abre una etiqueta
         """
         dat_atrib = {}
-        #Etiquetas UA
+        # Etiquetas UA
         account = ['username', 'passwd']
         uaserver = ['ip', 'puerto']
         rtpaudio = ['puerto']
         regproxy = ['ip', 'puerto']
         log = ['path']
         audio = ['path']
-        #eiquetas PROXY/REGISTER - log
+        # eiquetas PROXY/REGISTER - log
         server = ['name', 'ip', 'puerto']
         database = ['path', 'passwdpath']
-        
-        
         etiquetas = {'acount': account, 'uaserver': uaserver, 'rtpaudio': 
                     rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio,
                     'server': server, 'database': database}
-        if name in etiquetas:#siel nombre de la entique esta en el dic etiquetas
+        if name in etiquetas:# siel nombre de la entique esta en el dic etiquetas
             for atributo in etiquetas[name]:
-            #etiquetas[name] es una lista con los atributos de cada etiqueta
+            # etiquetas[name] es una lista con los atributos de cada etiqueta
                 if attrs.get(atributo, "") != "":
                     dat_atrib[atributo] = attrs.get(atributo, "")
             self.misdatos[name] = dat_atrib
 
     def get_tags(self):
         return self.misdatos
+        
 
 class ServerHandler(socketserver.DatagramRequestHandler):
     """Server SIP."""
@@ -64,7 +64,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             if METODO == 'INVITE':
                 self.wfile.write(b"SIP/2.0 100 Trying\r\n\r\n")
                 self.wfile.write(b"SIP/2.0 180 Ring\r\n\r\n")
-                #SDP de vuelta
+                # SDP de vuelta
                 O = '0=' + Sip_E + ' ' + IP + '\r\n'
                 P_RTP = miXML['rtpaudio']['puerto']
                 Cabecera = 'Content-Type: application/sdp\r\n\r\n'
@@ -73,9 +73,9 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             elif METODO == 'ACK':
                 # aEjecutar es un string con lo que se ha de ejecutar en la
                 # shell
-                ##aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio
-                print("Vamos a ejecutar RTP")#, aEjecutar)
-                ##os.system(aEjecutar)
+                # aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio
+                print("Vamos a ejecutar RTP")# aEjecutar)
+                # os.system(aEjecutar)
             else:
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
         elif METODO not in METODOS:
@@ -91,15 +91,15 @@ if __name__ == "__main__":
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
-        
-        #Direccion SIP IP Y Puerto de escucha del UA server
+
+        # Direccion SIP IP Y Puerto de escucha del UA server
         Sip_E = miXML['acount']['username'] 
         IP = miXML['uaserver']['ip']
         PORT = int(miXML['uaserver']['puerto'])
-        ##fichero_audio = sys.argv[3]
-        ##if not os.path.isfile(fichero_audio):
-            ##sys.exit(fichero_audio + ": File not found")
-        ##else:
+        # fichero_audio = sys.argv[3]
+        # if not os.path.isfile(fichero_audio):
+            # sys.exit(fichero_audio + ": File not found")
+        # else:
         serv = socketserver.UDPServer((IP, PORT), ServerHandler)
         print("Listening...")
     except IndexError:
