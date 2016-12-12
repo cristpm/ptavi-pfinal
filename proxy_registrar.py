@@ -101,27 +101,38 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         Dir_SIP = client_Puert_A.split(':')[1]
         if len(data.split(' ')) <= 4:
         # Si es el primer Register pedimos autentificacion
-            nonce = str(random.randint(1, 898989898798989898989))
+            nonce = str(random.randint(1, 89898989879))
             Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
             self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" + bytes(Cabecera, 'utf-8') + b"\r\n")
-            # guardamos el response que tendriamos que recibir
-            r = hashlib.md5()
-            r.update(b'superman')# contraseña provicional
-            r.update(bytes(nonce, 'utf-8'))
-            self.respuestas[Dir_SIP] = r.hexdigest()
-        else:
-        # Si nos llega el segundo register con su response
+            # Buscamos la contraseña de este usuario en el fichero de password
+            f = open(miXML['database']['passwdpath'],'r')
+            lines = f.read()
+            clientes = lines.split('\n')
+            for cliente in clientes:
+                if cliente.split(':')[0] == Dir_SIP:
+                    contraseña = cliente.split(':')[-1] 
+                    # guardamos el response que tendriamos que recibir
+                    r = hashlib.md5()
+                    r.update(bytes(contraseña, 'utf-8'))# contraseña provicional
+                    r.update(bytes(nonce, 'utf-8'))
+                    self.respuestas[Dir_SIP] = r.hexdigest()
+        else:# Si nos llega el segundo register con el response
             response = data.split('"')[-2]
-            if response == self.respuestas[Dir_SIP]:
-                self.Register(data)# Registramos al cliente
-                self.register2json()
-                self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
-            else:
+            try:
+                if response == self.respuestas[Dir_SIP]:
+                    self.Register(data)# Registramos al cliente
+                    self.register2json()
+                    self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+                else:
+                    print('no coincide el response enviado por el cliente')
+                    self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
+            except KeyError:# Este cliente no tiene cuenta
+                print('El cliente no esta en el fichero de contraseñas')
                 self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
 
     def register2json(self):
         """passe customer lists to json."""
-        json.dump(self.clientes, open('registered.json', 'w'), indent=4)
+        json.dump(self.clientes, open(miXML['database']['path'], 'w'), indent=4)
 
     def expiration(self):
         """remove clients expired."""
@@ -133,7 +144,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     def json2registered(self):
         """Customer copy a file json."""
         try:
-            with open('registered.json') as data_file:
+            with open(miXML['database']['path']) as data_file:
                 self.clientes = json.load(data_file)
         except:
             pass

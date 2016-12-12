@@ -8,7 +8,7 @@ import uaserver
 import socket
 import sys
 import hashlib
-
+import os
 
 if __name__ == "__main__":
     """
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         if METODO == 'INVITE':
             O = '0=' + Sip + ' ' + IP + '\r\n'
             P_RTP = miXML['rtpaudio']['puerto']
-            SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio' + P_RTP + 'RTP'
+            SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P_RTP + ' RTP'
             MENSAJE = MENSAJE + 'Content-Type: application/sdp\r\n\r\n' + SDP
     my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
     print('Enviando -- ')
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         if METODO == 'REGISTER' and num_respuesta == '401':
             nonce = respuesta.split('"')[-2]
             r = hashlib.md5()
-            r.update(b'superman') # contraseña provicional
+            r.update(bytes(miXML['acount']['passwd'], 'utf-8'))
             r.update(bytes(nonce, 'utf-8'))
             response = r.hexdigest()
             MENSAJE = MENSAJE + 'Authorization: Digest response="' + response + '"'
@@ -78,7 +78,13 @@ if __name__ == "__main__":
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
             print('Enviando -- ')
             print(MENSAJE)
-            #ENVIO RTP
+            #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
+            IP_RTP = respuesta.split(' ')[-3][0:9]
+            Puerto_RTP = respuesta.split(' ')[-2]
+            aEjecutar = 'mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + ' < ' + miXML['audio']['path']
+            print("Vamos a ejecutar RTP")# aEjecutar)
+            os.system(aEjecutar)
+            print("Envio Satisfactorio")
         my_socket.close()
     except ConnectionRefusedError:
         sys.exit("Intento de conexion fallido")

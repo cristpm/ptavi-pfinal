@@ -51,6 +51,8 @@ class XMLHandler(ContentHandler):
 
 class ServerHandler(socketserver.DatagramRequestHandler):
     """Server SIP."""
+    
+    Rtp = {}
 
     def handle(self):
         """Handle Server SIP."""
@@ -62,20 +64,26 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         METODOS = ['INVITE', 'BYE', 'ACK']
         if METODO in METODOS:
             if METODO == 'INVITE':
+                #sacar ip y puerto rtp del sdp
+                self.Rtp['IP']= data.split(' ')[4][0:9]
+                self.Rtp['P'] = data.split(' ')[-2]
+                print(self.Rtp)
                 self.wfile.write(b"SIP/2.0 100 Trying\r\n\r\n")
                 self.wfile.write(b"SIP/2.0 180 Ring\r\n\r\n")
                 # SDP de vuelta
                 O = '0=' + Sip_E + ' ' + IP + '\r\n'
                 P_RTP = miXML['rtpaudio']['puerto']
                 Cabecera = 'Content-Type: application/sdp\r\n\r\n'
-                SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio' + P_RTP + 'RTP'
-                self.wfile.write(b("SIP/2.0 200 OK\r\n" + Cabecera + SDP + '\r\n'))     
+                SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P_RTP + ' RTP'
+                self.wfile.write(b"SIP/2.0 200 OK\r\n" + bytes(Cabecera, 'utf-8')+ bytes(SDP, 'utf-8') + b"\r\n")     
             elif METODO == 'ACK':
-                # aEjecutar es un string con lo que se ha de ejecutar en la
-                # shell
-                # aEjecutar = 'mp32rtp -i ' + IP + ' -p 23032 < ' + fichero_audio
-                print("Vamos a ejecutar RTP")# aEjecutar)
-                # os.system(aEjecutar)
+                print(self.Rtp)
+                aEjecutar = 'mp32rtp -i ' + self.Rtp['IP'] + ' -p ' + self.Rtp['P'] +' < ' + miXML['audio']['path']
+                print("Vamos a ejecutar RTP")
+                os.system(aEjecutar)
+                print("Envio Satisfactorio")
+                self.Rtp.clear()
+                print(self.Rtp)
             else:
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
         elif METODO not in METODOS:
@@ -96,10 +104,6 @@ if __name__ == "__main__":
         Sip_E = miXML['acount']['username'] 
         IP = miXML['uaserver']['ip']
         PORT = int(miXML['uaserver']['puerto'])
-        # fichero_audio = sys.argv[3]
-        # if not os.path.isfile(fichero_audio):
-            # sys.exit(fichero_audio + ": File not found")
-        # else:
         serv = socketserver.UDPServer((IP, PORT), ServerHandler)
         print("Listening...")
     except IndexError:
