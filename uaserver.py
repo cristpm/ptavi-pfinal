@@ -7,7 +7,22 @@ from xml.sax.handler import ContentHandler
 import socketserver
 import sys
 import os
+import time
 
+class LOGHandler():
+    """
+    Configuración del fichero Log
+    """
+    def log(self, f, mensaje)
+    """
+        Método para escribir en el fichero log
+    """
+    gmt = time.strftime('%Y%m%d%H%M%S', time.gmtime(time.time())) + ' '
+    M = mensaje.split('\r\n')
+    S = ' '.join(M);
+    outfile = open(f, 'a') 
+    outfile.write(gmt + S + '\n')
+    outfile.close()
 
 class XMLHandler(ContentHandler):
     """

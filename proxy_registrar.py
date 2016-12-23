@@ -56,24 +56,26 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         my_socket.connect((IP, PUERTO))
-        print('Renviando -- ')
+        print('Renviando ------------------------')
         my_socket.send(bytes(mensaje, 'utf-8'))
         print(mensaje)
         respuesta = my_socket.recv(1024)
-        print('Enviando respuesta -- ')
+        print('Enviando respuesta ------------------------ ')
         self.wfile.write(respuesta)
         print(respuesta)
         my_socket.close()
      
     def Register(self, mensaje):
-        """Gestionamos que hacer cuando un usuario nos envia un Register valido"""
+        """Gestiona que hacer cuando un usuario nos envia un Register valido"""
         Ip_client = self.client_address[0]
         client_Puert_A = mensaje.split(' ')[1]
         Dir_SIP = client_Puert_A.split(':')[1]
         Puert_A = int(client_Puert_A.split(':')[2])
         Expires = int(mensaje.split('\r\n')[1][9:])
-        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() + Expires))
-        client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A, "Time_exp": Time_exp}]
+        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() 
+        + Expires))
+        client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A, 
+        "Time_exp": Time_exp}]
         if Expires == 0:
             for user in self.clientes:
                 if user[0] == Dir_SIP:
@@ -103,7 +105,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         # Si es el primer Register pedimos autentificacion
             nonce = str(random.randint(1, 89898989879))
             Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
-            self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" + bytes(Cabecera, 'utf-8') + b"\r\n")
+            self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" 
+            + bytes(Cabecera, 'utf-8') + b"\r\n")
             # Buscamos la contraseña de este usuario en el fichero de password
             f = open(miXML['database']['passwdpath'],'r')
             lines = f.read()
@@ -113,7 +116,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                     contraseña = cliente.split(':')[-1] 
                     # guardamos el response que tendriamos que recibir
                     r = hashlib.md5()
-                    r.update(bytes(contraseña, 'utf-8'))# contraseña provicional
+                    r.update(bytes(contraseña, 'utf-8'))
                     r.update(bytes(nonce, 'utf-8'))
                     self.respuestas[Dir_SIP] = r.hexdigest()
         else:# Si nos llega el segundo register con el response
