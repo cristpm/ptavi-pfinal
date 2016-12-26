@@ -13,16 +13,15 @@ class LOGHandler():
     """
     Configuración del fichero Log
     """
-    def log(self, f, mensaje)
-    """
-        Método para escribir en el fichero log
-    """
-    gmt = time.strftime('%Y%m%d%H%M%S', time.gmtime(time.time())) + ' '
-    M = mensaje.split('\r\n')
-    S = ' '.join(M);
-    outfile = open(f, 'a') 
-    outfile.write(gmt + S + '\n')
-    outfile.close()
+    def Writer(self, f, mensaje):
+        """ Método para escribir en el fichero log """
+    
+        gmt = time.strftime('%Y%m%d%H%M%S', time.gmtime(time.time())) + ' '
+        M = mensaje.split('\r\n')
+        S = ' '.join(M);
+        outfile = open(f, 'a') 
+        outfile.write(gmt + S + '\n')
+        outfile.close()
 
 class XMLHandler(ContentHandler):
     """
@@ -69,8 +68,12 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
     def handle(self):
         """Handle Server SIP."""
+        Ip_emisor = self.client_address[0]
+        P_emisor = self.client_address[1]
         line = self.rfile.read()
         data = line.decode('utf-8')
+        miLOG.Writer(Path_Log, 'Received to ' + IP_emisor + ':' + PORT_Proxy 
+        + ': ' + data )
         print("'Recibido -- ")
         print(data)
         METODO = data.split(' ')[0]
@@ -79,7 +82,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             if METODO == 'INVITE':
                 self.Rtp['IP']= data.split(' ')[4][0:9]
                 self.Rtp['P'] = data.split(' ')[-2]
-                print(self.Rtp)
+                miLOG.Writer(Path_Log, 'Send to ' + IP_emisor + ':' 
+                + PORT_Proxy + ': ' + '"SIP/2.0 100 Trying SIP/2.0 180 Ring')
                 self.wfile.write(b"SIP/2.0 100 Trying\r\n\r\n")
                 self.wfile.write(b"SIP/2.0 180 Ring\r\n\r\n")
                 # SDP de vuelta
@@ -89,6 +93,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P 
                 + 'RTP'
                 Respuesta = "SIP/2.0 200 OK\r\n" + C + SDP + "\r\n"
+                miLOG.Writer(Path_Log, 'Send to ' + IP_emisor + ':' 
+                + PORT_Proxy + ': ' + respuesta)
                 self.wfile.write(bytes(Respuesta, 'utf-8'))     
             elif METODO == 'ACK':
                 aEjecutar = 'mp32rtp -i ' + self.Rtp['IP'] + ' -p ' 
@@ -98,10 +104,16 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 # print("Envio Satisfactorio")
                 self.Rtp.clear()
             else:
+                miLOG.Writer(Path_Log, 'Send to ' + IP_emisor + ':' 
+                + PORT_Proxy + ': ' + 'SIP/2.0 200 OK')
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
         elif METODO not in METODOS:
+            miLOG.Writer(Path_Log, 'Send to ' + IP_emisor + ':' 
+                + PORT_Proxy + ': ' + 'SIP/2.0 405 Method Not Allowed')
             self.wfile.write(b"SIP/2.0 405 Method Not Allowed\r\n\r\n")
         else:
+            miLOG.Writer(Path_Log, 'Send to ' + IP_emisor + ':' 
+                + PORT_Proxy + ': ' + 'SIP/2.0 400 Bad Request')
             self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
 
 
@@ -112,9 +124,11 @@ if __name__ == "__main__":
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
+        miLOG = LOGHandler()
         Sip_E = miXML['acount']['username'] 
         IP = miXML['uaserver']['ip']
         PORT = int(miXML['uaserver']['puerto'])
+        Path_Log = miXML['log']['path']
         serv = socketserver.UDPServer((IP, PORT), ServerHandler)
         print("Listening...")
     except IndexError:

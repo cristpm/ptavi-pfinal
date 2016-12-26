@@ -21,10 +21,13 @@ if __name__ == "__main__":
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
         METODO = sys.argv[2]
-        OPCION = sys.argv[3]# Direccion sip del receptor o tiempo de expiracion
+        OPCION = sys.argv[3]
+        Path_Log = miXML['log']['path'] 
+        miLOG = uaserver.LOGHandler()
+        miLOG.Writer(Path_Log, 'Starting....')
     except IndexError:
         sys.exit("Usage: python uaclient.py config method option")
-        
+    
     Sip = miXML['acount']['username']
     IP = miXML['uaserver']['ip']
     PE = miXML['uaserver']['puerto']
@@ -45,6 +48,8 @@ if __name__ == "__main__":
             P = miXML['rtpaudio']['puerto']
             SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + ' RTP'
             MENSAJE = MENSAJE + 'Content-Type: application/sdp\r\n\r\n' + SDP
+    miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + str(PORT_Proxy) + ': ' 
+    + MENSAJE )
     my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
     print('Enviando ------------------------ ')
     print(MENSAJE)
@@ -53,6 +58,8 @@ if __name__ == "__main__":
     try:
         data = my_socket.recv(1024)
         respuesta = data.decode('utf-8')
+        miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + str(PORT_Proxy) 
+        + ': ' + respuesta)
         print('Recibido ------------------------ ')
         print(respuesta)
         num_respuesta = respuesta.split(' ')[1]
@@ -63,15 +70,25 @@ if __name__ == "__main__":
             r.update(bytes(nonce, 'utf-8'))
             resp = r.hexdigest()
             MENSAJE = MENSAJE + 'Authorization: Digest response="' + resp + '"'
+            miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + 
+            str(PORT_Proxy) + ': ' 
+             + MENSAJE )
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
             data = my_socket.recv(1024)
+            miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + 
+            str(PORT_Proxy) + ': ' 
+             + data.decode('utf-8') )
             print('Recibido ------------------------ ')
             print(data.decode('utf-8'))
             my_socket.close()
         if METODO == 'INVITE' and num_respuesta != '404':
             MENSAJE = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
+            miLOG.Writer(Path_Log, 'Send to ' +IP_Proxy + ':' + str(PORT_Proxy) 
+            
+            + ': ' 
+            + MENSAJE )
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
@@ -84,5 +101,7 @@ if __name__ == "__main__":
             # os.system(aEjecutar)
             # print("Envio Satisfactorio")
         my_socket.close()
+        miLOG.Writer(Path_Log, 'Finishing...' )
     except ConnectionRefusedError:
-        sys.exit("Intento de conexion fallido")
+        miLOG.Writer(Path_Log, 'Conexion con el PROXY/REGISTER fallido' )
+        sys.exit("Conexion con el PROXY/REGISTER fallido")
