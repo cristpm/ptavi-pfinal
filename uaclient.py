@@ -80,7 +80,7 @@ if __name__ == "__main__":
             PORT_Proxy + ': ' + data.decode('utf-8') )
             print('Recibido ------------------------ ')
             print(data.decode('utf-8'))
-        if METODO == 'INVITE' and num_respuesta != '404':
+        if METODO == 'INVITE' and respuesta.split(' ')[1] != '404':
             MENSAJE = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
             miLOG.Writer(Path_Log, 'Send to ' +IP_Proxy + ':' + PORT_Proxy + \
             ': ' + MENSAJE )
@@ -88,10 +88,10 @@ if __name__ == "__main__":
             print('Enviando ------------------------ ')
             print(MENSAJE)
             #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
-            IP_RTP = respuesta.split(' ')[-3][0:9]
-            Puerto_RTP = respuesta.split(' ')[-2]
-            aEjecutar = './mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + ' < ' 
-            + miXML['audio']['path']
+            IP_RTP = respuesta.plit(' ')[-2][0:9]
+            Puerto_RTP = respuesta.split(' ')[-1][0:-5]
+            aEjecutar = './mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + \
+            ' < ' + miXML['audio']['path']
             print("Vamos a ejecutar RTP", aEjecutar)
             miLOG.Writer(Path_Log, aEjecutar)
             os.system(aEjecutar)

@@ -68,8 +68,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
     def handle(self):
         """Handle Server SIP."""
-        Ip_emisor = self.client_address[0]
-        P_emisor = self.client_address[1]
+        Ip_emisor = str(self.client_address[0])
+        P_emisor = str(self.client_address[1])
         line = self.rfile.read()
         data = line.decode('utf-8')
         miLOG.Writer(Path_Log, 'Received to ' + Ip_emisor + ':' + P_emisor + \
