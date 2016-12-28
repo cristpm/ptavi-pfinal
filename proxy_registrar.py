@@ -20,7 +20,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     clientes = []
     respuestas = {}
 
-    def handle(self):  # TRATAMOS EL SOCKET COMO UN FICHERO
+    def handle(self):
         """Handle Register/Proxy SIP."""
         # self.json2registered()
         self.expiration()

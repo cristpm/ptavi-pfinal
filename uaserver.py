@@ -68,12 +68,12 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 
     def handle(self):
         """Handle Server SIP."""
-        Ip_emisor = str(self.client_address[0])
-        P_emisor = str(self.client_address[1])
+        Ip_emisor = self.client_address[0]
+        P_emisor = self.client_address[1]
         line = self.rfile.read()
         data = line.decode('utf-8')
-        miLOG.Writer(Path_Log, 'Received to ' + Ip_emisor + ':' + P_emisor 
-        + ': ' + data)
+        miLOG.Writer(Path_Log, 'Received to ' + Ip_emisor + ':' + P_emisor + \
+        ': ' + data)
         print("'Recibido -- ")
         print(data)
         METODO = data.split(' ')[0]
@@ -82,24 +82,24 @@ class ServerHandler(socketserver.DatagramRequestHandler):
             if METODO == 'INVITE':
                 self.Rtp['IP']= data.split(' ')[4][0:9]
                 self.Rtp['P'] = data.split(' ')[-2]
-                miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
-                + P_emisor + ': ' + '"SIP/2.0 100 Trying SIP/2.0 180 Ring')
-                self.wfile.write(b"SIP/2.0 100 Trying\r\n\r\n")
-                self.wfile.write(b"SIP/2.0 180 Ring\r\n\r\n")
                 # SDP de vuelta
                 O = '0=' + Sip_E + ' ' + IP + '\r\n'
                 P = miXML['rtpaudio']['puerto']
                 C = 'Content-Type: application/sdp\r\n\r\n'
                 SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + 'RTP'
-                Respuesta = "SIP/2.0 200 OK\r\n" + C + SDP + "\r\n"
-                miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
-                + P_emisor + ': ' + Respuesta)
+                Respuesta = "SIP/2.0 100 Trying\r\n\r\n" + \
+                "SIP/2.0 180 Ring\r\n\r\n" + "SIP/2.0 200 OK\r\n" + \
+                C + SDP + "\r\n"
+                miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' + \
+                P_emisor + ': ' + Respuesta)
                 self.wfile.write(bytes(Respuesta, 'utf-8'))     
             elif METODO == 'ACK':
-                aEjecutar = 'mp32rtp -i ' + self.Rtp['IP'] + ' -p ' + self.Rtp['P'] + ' < ' + miXML['audio']['path']
-                print("Vamos a ejecutar RTP")
-                # os.system(aEjecutar)
-                # print("Envio Satisfactorio")
+                aEjecutar = './mp32rtp -i ' + self.Rtp['IP'] + ' -p ' + \
+                self.Rtp['P'] + ' < ' + miXML['audio']['path']
+                print("Vamos a ejecutar RTP", aEjecutar )
+                miLOG.Writer(Path_Log, aEjecutar)
+                os.system(aEjecutar)
+                print("Envio Satisfactorio")
                 self.Rtp.clear()
             else:
                 miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 

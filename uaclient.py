@@ -29,18 +29,19 @@ if __name__ == "__main__":
         sys.exit("Usage: python uaclient.py config method option")
     
     Sip = miXML['acount']['username']
-    IP = miXML['uaserver']['ip']
-    PE = miXML['uaserver']['puerto']
+    IP = miXML['uaserver']['ip']# IP de la parte UAS del UA
+    PE = miXML['uaserver']['puerto']# Puerto de escucha de la parte UAS del UA
     IP_Proxy = miXML['regproxy']['ip']
-    PORT_Proxy = int(miXML['regproxy']['puerto'])
+    PORT_Proxy = miXML['regproxy']['puerto']
     
     # Creamos el socket, lo configuramos y lo atamos al Servidor REGISTER/PROXY
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    my_socket.connect((IP_Proxy, PORT_Proxy))
+    my_socket.connect((IP_Proxy, int(PORT_Proxy)))
 
     if METODO == 'REGISTER':
-        MENSAJE = METODO + ' sip:' + Sip + ':' + PE + ' SIP/2.0\r\nExpires: ' + OPCION + '\r\n'
+        MENSAJE = METODO + ' sip:' + Sip + ':' + PE + \
+        ' SIP/2.0\r\nExpires: '  +  OPCION + '\r\n'
     else:
         MENSAJE = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
         if METODO == 'INVITE':
@@ -48,8 +49,8 @@ if __name__ == "__main__":
             P = miXML['rtpaudio']['puerto']
             SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + ' RTP'
             MENSAJE = MENSAJE + 'Content-Type: application/sdp\r\n\r\n' + SDP
-    miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + str(PORT_Proxy) + ': ' 
-    + MENSAJE )
+    miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
+    ': ' + MENSAJE )
     my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
     print('Enviando ------------------------ ')
     print(MENSAJE)
@@ -58,48 +59,43 @@ if __name__ == "__main__":
     try:
         data = my_socket.recv(1024)
         respuesta = data.decode('utf-8')
-        miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + str(PORT_Proxy) 
-        + ': ' + respuesta)
+        miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + PORT_Proxy + \
+        ': ' + respuesta)
         print('Recibido ------------------------ ')
         print(respuesta)
-        num_respuesta = respuesta.split(' ')[1]
-        if METODO == 'REGISTER' and num_respuesta == '401':
+        if METODO == 'REGISTER' and respuesta.split(' ')[1] == '401':
             nonce = respuesta.split('"')[-2]
             r = hashlib.md5()
             r.update(bytes(miXML['acount']['passwd'], 'utf-8'))
             r.update(bytes(nonce, 'utf-8'))
             resp = r.hexdigest()
             MENSAJE = MENSAJE + 'Authorization: Digest response="' + resp + '"'
-            miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + 
-            str(PORT_Proxy) + ': ' 
-             + MENSAJE )
+            miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
+            ': ' + MENSAJE )
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
             data = my_socket.recv(1024)
-            miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + 
-            str(PORT_Proxy) + ': ' 
-             + data.decode('utf-8') )
+            miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + \
+            PORT_Proxy + ': ' + data.decode('utf-8') )
             print('Recibido ------------------------ ')
             print(data.decode('utf-8'))
-            my_socket.close()
         if METODO == 'INVITE' and num_respuesta != '404':
             MENSAJE = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
-            miLOG.Writer(Path_Log, 'Send to ' +IP_Proxy + ':' + str(PORT_Proxy) 
-            
-            + ': ' 
-            + MENSAJE )
+            miLOG.Writer(Path_Log, 'Send to ' +IP_Proxy + ':' + PORT_Proxy + \
+            ': ' + MENSAJE )
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
             #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
             IP_RTP = respuesta.split(' ')[-3][0:9]
             Puerto_RTP = respuesta.split(' ')[-2]
-            aEjecutar = 'mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + ' < ' 
+            aEjecutar = './mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + ' < ' 
             + miXML['audio']['path']
-            print("Vamos a ejecutar RTP")# aEjecutar)
-            # os.system(aEjecutar)
-            # print("Envio Satisfactorio")
+            print("Vamos a ejecutar RTP", aEjecutar)
+            miLOG.Writer(Path_Log, aEjecutar)
+            os.system(aEjecutar)
+            print("Envio Satisfactorio")
         my_socket.close()
         miLOG.Writer(Path_Log, 'Finishing...' )
     except ConnectionRefusedError:
