@@ -106,7 +106,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
             nonce = str(random.randint(1, 89898989879))
             Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
             self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" 
-            + bytes(Cabecera, 'utf-8') + b"\r\n")
+            + bytes(Cabecera, 'utf-8') + b"\r\n\r\n")
             # Buscamos la contraseña de este usuario en el fichero de password
             f = open(miXML['database']['passwdpath'],'r')
             lines = f.read()

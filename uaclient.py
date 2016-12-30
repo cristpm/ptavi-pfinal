@@ -72,7 +72,7 @@ if __name__ == "__main__":
             MENSAJE = MENSAJE + 'Authorization: Digest response="' + resp + '"'
             miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
             ': ' + MENSAJE )
-            my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
+            my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
             data = my_socket.recv(1024)
@@ -88,7 +88,7 @@ if __name__ == "__main__":
             print('Enviando ------------------------ ')
             print(MENSAJE)
             #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
-            IP_RTP = respuesta.plit(' ')[-2][0:9]
+            IP_RTP = respuesta.split(' ')[-2][0:9]
             Puerto_RTP = respuesta.split(' ')[-1][0:-5]
             aEjecutar = './mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + \
             ' < ' + miXML['audio']['path']
