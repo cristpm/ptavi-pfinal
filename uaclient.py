@@ -16,7 +16,7 @@ if __name__ == "__main__":
     """
     try:
         parser = make_parser()
-        cHandler = uaserver.XMLHandler()
+        cHandler = uaserver.XML_UA()
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()

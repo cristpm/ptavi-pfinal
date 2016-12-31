@@ -5,7 +5,6 @@
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 import socketserver
-import uaserver
 import sys
 import time
 import json
@@ -13,7 +12,53 @@ import socket
 import random
 import hashlib
 
+class LOGHandler():
+    """
+    Configuración del fichero Log
+    """
+    def Writer(self, f, mensaje):
+        """ Método para escribir en el fichero log """
+    
+        gmt = time.strftime('%Y%m%d%H%M%S', time.gmtime(time.time())) + ' '
+        M = mensaje.split('\r\n')
+        S = ' '.join(M);
+        outfile = open(f, 'a') 
+        outfile.write(gmt + S + '\n')
+        outfile.close()
+        
+        
+class XML_PR(ContentHandler):
+    """
+    Clase para manejar XML
+    """
 
+    def __init__(self):
+        """
+        Constructor. Inicializamos las variables
+        """
+        self.misdatos = {}
+
+    def startElement(self, name, attrs):
+        """
+        Método que se llama cuando se abre una etiqueta
+        """
+        dat_atrib = {}
+        
+        server = ['name', 'ip', 'puerto']
+        database = ['path', 'passwdpath']
+        log = ['path']
+        etiquetas = {'log': log, 'server': server, 'database': database}
+        if name in etiquetas:#  esta en el dic etiquetas
+            for atributo in etiquetas[name]:
+            # etiquetas[name] es una lista con los atributos de cada etiqueta
+                if attrs.get(atributo, "") != "":
+                    dat_atrib[atributo] = attrs.get(atributo, "")
+            self.misdatos[name] = dat_atrib
+
+    def get_tags(self):
+        return self.misdatos
+        
+        
 class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     """Echo server Register Proxy class."""
 
@@ -23,7 +68,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
     def handle(self):
         """Handle Register/Proxy SIP."""
         # self.json2registered()
-        self.expiration()
+        # self.expiration()
         line = self.rfile.read()
         data = line.decode('utf-8')
         print("'Recibido --")
@@ -52,7 +97,6 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 client = user
         IP = client[1]["IP"]
         PUERTO = client[1]["Puerto"]
-        # Creamos el socket,lo configuramos y lo atamos a un servidor/puerto UA
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         my_socket.connect((IP, PUERTO))
@@ -72,10 +116,11 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         Dir_SIP = client_Puert_A.split(':')[1]
         Puert_A = int(client_Puert_A.split(':')[2])
         Expires = int(mensaje.split('\r\n')[1][9:])
-        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time() 
-        + Expires))
+        Time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
+        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time())
+        + Expires)
         client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A, 
-        "Time_exp": Time_exp}]
+        "Expires": Expires, "Time_registro": Time, "Time_expiracion": Time_exp}]
         if Expires == 0:
             for user in self.clientes:
                 if user[0] == Dir_SIP:
@@ -141,7 +186,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         """remove clients expired."""
         gmt = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
         for user in self.clientes:
-            if gmt > user[1]["Time_exp"]:
+            if gmt > user[1]["Time_expiracion"]:
                 self.clientes.remove(user)
 
     def json2registered(self):
@@ -156,12 +201,14 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 if __name__ == "__main__":
     try:
         parser = make_parser()
-        cHandler = uaserver.XMLHandler()
+        cHandler = XML_PR()
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
+        miLOG = LOGHandler()
         IP = miXML['server']['ip']
         PORT = int(miXML['server']['puerto'])
+        Path_Log = miXML['log']['path']
         serv = socketserver.UDPServer(('', PORT), SIPRegisterHandler)
         print('Server MiServidorBigBang listening at port ' + str(PORT) + '...')
     except IndexError:

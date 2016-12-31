@@ -23,7 +23,7 @@ class LOGHandler():
         outfile.write(gmt + S + '\n')
         outfile.close()
 
-class XMLHandler(ContentHandler):
+class XML_UA(ContentHandler):
     """
     Clase para manejar XML
     """
@@ -45,11 +45,8 @@ class XMLHandler(ContentHandler):
         regproxy = ['ip', 'puerto']
         log = ['path']
         audio = ['path']
-        server = ['name', 'ip', 'puerto']
-        database = ['path', 'passwdpath']
         etiquetas = {'acount': account, 'uaserver': uaserver, 'rtpaudio': 
-                    rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio,
-                    'server': server, 'database': database}
+                    rtpaudio, 'regproxy': regproxy, 'log': log, 'audio': audio}
         if name in etiquetas:#  esta en el dic etiquetas
             for atributo in etiquetas[name]:
             # etiquetas[name] es una lista con los atributos de cada etiqueta
@@ -118,7 +115,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
 if __name__ == "__main__":
     try:
         parser = make_parser()
-        cHandler = XMLHandler()
+        cHandler = XML_UA()
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
