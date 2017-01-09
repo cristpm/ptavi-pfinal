@@ -77,13 +77,14 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         METODOS = ['INVITE', 'BYE', 'ACK']
         if METODO in METODOS:
             if METODO == 'INVITE':
-                self.Rtp['IP']= data.split(' ')[4][0:9]
+                self.Rtp['IP']= data.split(' ')[-3][0:9]
                 self.Rtp['P'] = data.split(' ')[-2]
                 # SDP de vuelta
-                O = '0=' + Sip_E + ' ' + IP + '\r\n'
+                O = 'o=' + Sip_E + ' ' + IP + '\r\n'
                 P = miXML['rtpaudio']['puerto']
                 C = 'Content-Type: application/sdp\r\n\r\n'
-                SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + 'RTP'
+                SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + \
+                ' RTP'
                 Respuesta = "SIP/2.0 100 Trying\r\n\r\n" + \
                 "SIP/2.0 180 Ring\r\n\r\n" + "SIP/2.0 200 OK\r\n" + \
                 C + SDP + "\r\n"
@@ -91,6 +92,8 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 P_emisor + ': ' + Respuesta)
                 self.wfile.write(bytes(Respuesta, 'utf-8'))     
             elif METODO == 'ACK':
+                VLC = 'cvlc rtp://@' + IP + ':' + miXML['rtpaudio']['puerto']
+                #os.system(VLC)
                 aEjecutar = './mp32rtp -i ' + self.Rtp['IP'] + ' -p ' + \
                 self.Rtp['P'] + ' < ' + miXML['audio']['path']
                 print("Vamos a ejecutar RTP", aEjecutar )

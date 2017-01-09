@@ -12,7 +12,7 @@ import socket
 import random
 import hashlib
 
-class LOGHandler():
+class ProxyHandler():
     """
     Configuración del fichero Log
     """
@@ -25,6 +25,21 @@ class LOGHandler():
         outfile = open(f, 'a') 
         outfile.write(gmt + S + '\n')
         outfile.close()
+    
+    def Cabecera_Proxy(self, mensaje):
+        """ Método que devuelve el mensaje añadiendo la cabecera proxy """  
+        E = mensaje.split('\r\n')
+        if E[-2] == '':# Si el mensaje no tiene cuerpo
+            E[-2] = 'Via: SIP/2.0/UDP' + \
+            ' proxy.' + miXML['server']['name'] + ':' + \
+            miXML['server']['puerto']+ ';branch=uyvfg7236ftgu4b'
+            Nuevo_Mensaje = '\r\n'.join(E);
+        else:
+            E[E.index('')] = 'Via: SIP/2.0/UDP' + \
+            ' proxy.' + miXML['server']['name'] + ':' + \
+            miXML['server']['puerto']+ ';branch=uyvfg7236ftgu4b\r\n'
+            Nuevo_Mensaje = '\r\n'.join(E);    ## aqui error de empty line   
+        return Nuevo_Mensaje
         
         
 class XML_PR(ContentHandler):
@@ -69,8 +84,12 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         """Handle Register/Proxy SIP."""
         # self.json2registered()
         # self.expiration()
+        Ip_emisor = str(self.client_address[0])
+        P_emisor = str(self.client_address[1])
         line = self.rfile.read()
         data = line.decode('utf-8')
+        miProxy.Writer(Path_Log, 'Received to ' + Ip_emisor + ':' + P_emisor + \
+        ': ' + data)
         print("'Recibido --")
         print(data)
         METODO = data.split(' ')[0]
@@ -82,10 +101,16 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 if self.Client_Registrado(data) == "TRUE":
                     self.Server_Proxy(data)
                 else:
+                    miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
+                        + P_emisor + ': ' + 'SIP/2.0 404 User Not Found')
                     self.wfile.write(b"SIP/2.0 404 User Not Found\r\n\r\n")
         elif METODO not in METODOS:
+            miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
+                + P_emisor + ': ' + 'SIP/2.0 405 Method Not Allowed')
             self.wfile.write(b"SIP/2.0 405 Method Not Allowed\r\n\r\n")
         else:
+            miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
+                + P_emisor + ': ' + 'SIP/2.0 400 Bad Request')
             self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
 
     def Server_Proxy(self, mensaje):
@@ -95,19 +120,29 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         for user in self.clientes:
             if user[0] == Dir_SIP:
                 client = user
-        IP = client[1]["IP"]
-        PUERTO = client[1]["Puerto"]
+        IP = str(client[1]["IP"])
+        PUERTO = str(client[1]["Puerto"])
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        my_socket.connect((IP, PUERTO))
+        my_socket.connect((IP, int(PUERTO)))
+        Nuevo_Mensaje = miProxy.Cabecera_Proxy(mensaje)
+        miProxy.Writer(Path_Log, 'Send to ' + IP + ':' + PUERTO + ': ' + \
+        Nuevo_Mensaje)
         print('Renviando ------------------------')
-        my_socket.send(bytes(mensaje, 'utf-8'))
-        print(mensaje)
-        respuesta = my_socket.recv(1024)
-        print('Enviando respuesta ------------------------ ')
-        self.wfile.write(respuesta)
-        print(respuesta)
-        my_socket.close()
+        print(Nuevo_Mensaje)
+        my_socket.send(bytes(Nuevo_Mensaje, 'utf-8'))##
+        METODO = Nuevo_Mensaje.split(' ')[0]
+        if METODO != 'ACK':
+            respuesta = my_socket.recv(1024)##
+            miProxy.Writer(Path_Log, 'Received to ' + IP + ':' + PUERTO + \
+            ': ' + respuesta.decode('utf-8'))
+            Nueva_Respuesta = miProxy.Cabecera_Proxy(respuesta.decode('utf-8'))
+            miProxy.Writer(Path_Log, 'Send to ' + IP + ':' + PUERTO + ': ' + \
+            Nueva_Respuesta)
+            print('Enviando respuesta ------------------------ ')
+            print(Nueva_Respuesta)
+            self.wfile.write(bytes(Nueva_Respuesta, 'utf-8'))
+            my_socket.close()
      
     def Register(self, mensaje):
         """Gestiona que hacer cuando un usuario nos envia un Register valido"""
@@ -117,8 +152,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         Puert_A = int(client_Puert_A.split(':')[2])
         Expires = int(mensaje.split('\r\n')[1][9:])
         Time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
-        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time())
-        + Expires)
+        Time_exp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()
+        + Expires))
         client = [Dir_SIP, {"IP": Ip_client, "Puerto": Puert_A, 
         "Expires": Expires, "Time_registro": Time, "Time_expiracion": Time_exp}]
         if Expires == 0:
@@ -144,12 +179,16 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 
     def Autentificacion_Register(self, data):
         """Realiza todo el proceso de un Register"""
+        Ip_emisor = str(self.client_address[0])
+        P_emisor = str(self.client_address[1])
         client_Puert_A = data.split(' ')[1]
         Dir_SIP = client_Puert_A.split(':')[1]
         if len(data.split(' ')) <= 4:
         # Si es el primer Register pedimos autentificacion
             nonce = str(random.randint(1, 89898989879))
             Cabecera = 'WWW Authenticate: Digest nonce="' +  nonce + '"'
+            miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' + P_emisor + \
+            ': ' + 'SIP/2.0 401 Unauthorized ' + Cabecera)
             self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" 
             + bytes(Cabecera, 'utf-8') + b"\r\n\r\n")
             # Buscamos la contraseña de este usuario en el fichero de password
@@ -170,12 +209,18 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 if response == self.respuestas[Dir_SIP]:
                     self.Register(data)# Registramos al cliente
                     self.register2json()
+                    miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' + \
+                     P_emisor + ': ' + 'SIP/2.0 200 OK')
                     self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
                 else:
-                    print('no coincide el response enviado por el cliente')
+                    miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' + \
+                    P_emisor + ': ' + 'SIP/2.0 400 Bad Request' + \
+                    'response recibido incorrecto')
                     self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
             except KeyError:# Este cliente no tiene cuenta
-                print('El cliente no esta en el fichero de contraseñas')
+                miProxy.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' + \
+                P_emisor + ': ' + 'SIP/2.0 400 Bad Request' + \
+                'Cliente sin cuenta previa')
                 self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
 
     def register2json(self):
@@ -205,7 +250,7 @@ if __name__ == "__main__":
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
-        miLOG = LOGHandler()
+        miProxy = ProxyHandler()
         IP = miXML['server']['ip']
         PORT = int(miXML['server']['puerto'])
         Path_Log = miXML['log']['path']

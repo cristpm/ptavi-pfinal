@@ -45,7 +45,7 @@ if __name__ == "__main__":
     else:
         MENSAJE = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
         if METODO == 'INVITE':
-            O = '0=' + Sip + ' ' + IP + '\r\n'
+            O = 'o=' + Sip + ' ' + IP + '\r\n'
             P = miXML['rtpaudio']['puerto']
             SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + ' RTP'
             MENSAJE = MENSAJE + 'Content-Type: application/sdp\r\n\r\n' + SDP
@@ -88,14 +88,16 @@ if __name__ == "__main__":
             print('Enviando ------------------------ ')
             print(MENSAJE)
             #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
-            IP_RTP = respuesta.split(' ')[-2][0:9]
-            Puerto_RTP = respuesta.split(' ')[-1][0:-5]
+            IP_RTP = respuesta.split(' ')[-3][0:9]
+            Puerto_RTP = respuesta.split(' ')[-2]
             aEjecutar = './mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + \
             ' < ' + miXML['audio']['path']
             print("Vamos a ejecutar RTP", aEjecutar)
             miLOG.Writer(Path_Log, aEjecutar)
             os.system(aEjecutar)
             print("Envio Satisfactorio")
+            VLC = 'cvlc rtp://@' + IP + ':' + miXML['rtpaudio']['puerto']
+            #os.system(VLC)
         my_socket.close()
         miLOG.Writer(Path_Log, 'Finishing...' )
     except ConnectionRefusedError:
