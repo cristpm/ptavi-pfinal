@@ -4,24 +4,39 @@
 
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+from threading import Thread
 import socketserver
 import sys
 import os
 import time
 
-class LOGHandler():
-    """
-    Configuración del fichero Log
-    """
-    def Writer(self, f, mensaje):
-        """ Método para escribir en el fichero log """
+def Writer_toLOG(f, mensaje):
+    """ Método para escribir en el fichero log """
+
+    gmt = time.strftime('%Y%m%d%H%M%S', time.gmtime(time.time())) + ' '
+    M = mensaje.split('\r\n')
+    S = ' '.join(M);
+    outfile = open(f, 'a') 
+    outfile.write(gmt + S + '\n')
+    outfile.close()
     
-        gmt = time.strftime('%Y%m%d%H%M%S', time.gmtime(time.time())) + ' '
-        M = mensaje.split('\r\n')
-        S = ' '.join(M);
-        outfile = open(f, 'a') 
-        outfile.write(gmt + S + '\n')
-        outfile.close()
+    
+def Envio_RTP(ip, puerto, medio):
+    """ Metodo para enviar RTP"""
+    aEjecutar = './mp32rtp -i ' + ip + ' -p ' + puerto + ' < ' + medio
+    print("Vamos a ejecutar RTP Dirigido a", ip + ':' + puerto)
+    os.system(aEjecutar)
+    print("Envio Satisfactorio")
+    
+    
+def Escucha_VLC(ip, puerto):
+    """ Metodo para enscuchar en una ip y puerto con VLC"""
+    VLC = 'cvlc rtp://@' + ip + ':' + puerto + ' 2> /dev/null &'
+    print('ejecutando: ' + VLC)
+    os.system(VLC)
+
+
+
 
 class XML_UA(ContentHandler):
     """
@@ -69,7 +84,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
         P_emisor = str(self.client_address[1])
         line = self.rfile.read()
         data = line.decode('utf-8')
-        miLOG.Writer(Path_Log, 'Received to ' + Ip_emisor + ':' + P_emisor + \
+        Writer_toLOG(Path_Log, 'Received to ' + Ip_emisor + ':' + P_emisor + \
         ': ' + data)
         print("'Recibido -- ")
         print(data)
@@ -88,29 +103,36 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 Respuesta = "SIP/2.0 100 Trying\r\n\r\n" + \
                 "SIP/2.0 180 Ring\r\n\r\n" + "SIP/2.0 200 OK\r\n" + \
                 C + SDP + "\r\n"
-                miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' + \
+                Writer_toLOG(Path_Log, 'Send to ' + Ip_emisor + ':' + \
                 P_emisor + ': ' + Respuesta)
                 self.wfile.write(bytes(Respuesta, 'utf-8'))     
             elif METODO == 'ACK':
-                VLC = 'cvlc rtp://@' + IP + ':' + miXML['rtpaudio']['puerto']
-                #os.system(VLC)
-                aEjecutar = './mp32rtp -i ' + self.Rtp['IP'] + ' -p ' + \
-                self.Rtp['P'] + ' < ' + miXML['audio']['path']
-                print("Vamos a ejecutar RTP", aEjecutar )
-                miLOG.Writer(Path_Log, aEjecutar)
-                os.system(aEjecutar)
-                print("Envio Satisfactorio")
+                #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
+                IP_RTP = self.Rtp['IP']
+                P_RTP = self.Rtp['P']
+                # Enviamo RTP a la ip y puerto sacados del sdp EL MEDIO INDICADO
+                Medio = miXML['audio']['path']
+                thread1 = Thread(target=Envio_RTP, args=(IP_RTP,P_RTP,Medio,))
+                # Escucha del medio por VLC
+                thread2 = Thread(target=Escucha_VLC, args=(IP_RTP,P_RTP,))
+                # Iniciamos hilos
+                Writer_toLOG(Path_Log, "Vamos a ejecutar RTP Dirigido a" + \
+                IP_RTP + ':' + P_RTP)
+                thread1.start()
+                Writer_toLOG(Path_Log, "Envio Satisfactorio")
+                time.sleep(0.1)
+                thread2.start()
                 self.Rtp.clear()
             else:
-                miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
+                Writer_toLOG(Path_Log, 'Send to ' + Ip_emisor + ':' 
                 + P_emisor + ': ' + 'SIP/2.0 200 OK')
                 self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
         elif METODO not in METODOS:
-            miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
+            Writer_toLOG(Path_Log, 'Send to ' + Ip_emisor + ':' 
                 + P_emisor + ': ' + 'SIP/2.0 405 Method Not Allowed')
             self.wfile.write(b"SIP/2.0 405 Method Not Allowed\r\n\r\n")
         else:
-            miLOG.Writer(Path_Log, 'Send to ' + Ip_emisor + ':' 
+            Writer_toLOG(Path_Log, 'Send to ' + Ip_emisor + ':' 
                 + P_emisor + ': ' + 'SIP/2.0 400 Bad Request')
             self.wfile.write(b"SIP/2.0 400 Bad Request\r\n\r\n")
 
@@ -122,7 +144,6 @@ if __name__ == "__main__":
         parser.setContentHandler(cHandler)
         parser.parse(open(sys.argv[1]))
         miXML = cHandler.get_tags()
-        miLOG = LOGHandler()
         Sip_E = miXML['acount']['username'] 
         IP = miXML['uaserver']['ip']
         PORT = int(miXML['uaserver']['puerto'])

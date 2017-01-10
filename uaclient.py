@@ -4,11 +4,17 @@
 
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+from threading import Thread
+from uaserver import Envio_RTP
+from uaserver import Escucha_VLC
+from uaserver import Writer_toLOG
 import uaserver
 import socket
-import sys
 import hashlib
+import time
+import sys
 import os
+    
 
 if __name__ == "__main__":
     """
@@ -22,9 +28,8 @@ if __name__ == "__main__":
         miXML = cHandler.get_tags()
         METODO = sys.argv[2]
         OPCION = sys.argv[3]
-        Path_Log = miXML['log']['path'] 
-        miLOG = uaserver.LOGHandler()
-        miLOG.Writer(Path_Log, 'Starting....')
+        Path_Log = miXML['log']['path']
+        Writer_toLOG(Path_Log, 'Starting....')
     except IndexError:
         sys.exit("Usage: python uaclient.py config method option")
     
@@ -49,7 +54,10 @@ if __name__ == "__main__":
             P = miXML['rtpaudio']['puerto']
             SDP = 'v=0\r\n' + O + 's=misesion\r\nt=0\r\nm=audio ' + P + ' RTP'
             MENSAJE = MENSAJE + 'Content-Type: application/sdp\r\n\r\n' + SDP
-    miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
+        if METODO == 'BYE':
+            os.system('killall mp32rtp 2> /dev/null')
+            os.system('killall vlc 2> /dev/null')
+    Writer_toLOG(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
     ': ' + MENSAJE )
     my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
     print('Enviando ------------------------ ')
@@ -59,7 +67,7 @@ if __name__ == "__main__":
     try:
         data = my_socket.recv(1024)
         respuesta = data.decode('utf-8')
-        miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + PORT_Proxy + \
+        Writer_toLOG(Path_Log, 'Received to ' + IP_Proxy + ':' + PORT_Proxy + \
         ': ' + respuesta)
         print('Recibido ------------------------ ')
         print(respuesta)
@@ -70,36 +78,40 @@ if __name__ == "__main__":
             r.update(bytes(nonce, 'utf-8'))
             resp = r.hexdigest()
             MENSAJE = MENSAJE + 'Authorization: Digest response="' + resp + '"'
-            miLOG.Writer(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
+            Writer_toLOG(Path_Log, 'Send to ' + IP_Proxy + ':' + PORT_Proxy + \
             ': ' + MENSAJE )
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
             data = my_socket.recv(1024)
-            miLOG.Writer(Path_Log, 'Received to ' + IP_Proxy + ':' + \
+            Writer_toLOG(Path_Log, 'Received to ' + IP_Proxy + ':' + \
             PORT_Proxy + ': ' + data.decode('utf-8') )
             print('Recibido ------------------------ ')
             print(data.decode('utf-8'))
         if METODO == 'INVITE' and respuesta.split(' ')[1] != '404':
             MENSAJE = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
-            miLOG.Writer(Path_Log, 'Send to ' +IP_Proxy + ':' + PORT_Proxy + \
+            Writer_toLOG(Path_Log, 'Send to ' +IP_Proxy + ':' + PORT_Proxy + \
             ': ' + MENSAJE )
             my_socket.send(bytes(MENSAJE, 'utf-8') + b'\r\n')
             print('Enviando ------------------------ ')
             print(MENSAJE)
             #ENVIO RTP sacar ip y puerto RTP del sdp que llega en el 200 ok
             IP_RTP = respuesta.split(' ')[-3][0:9]
-            Puerto_RTP = respuesta.split(' ')[-2]
-            aEjecutar = './mp32rtp -i ' + IP_RTP + ' -p ' + Puerto_RTP + \
-            ' < ' + miXML['audio']['path']
-            print("Vamos a ejecutar RTP", aEjecutar)
-            miLOG.Writer(Path_Log, aEjecutar)
-            os.system(aEjecutar)
-            print("Envio Satisfactorio")
-            VLC = 'cvlc rtp://@' + IP + ':' + miXML['rtpaudio']['puerto']
-            #os.system(VLC)
+            P_RTP = respuesta.split(' ')[-2]
+            # Enviamo RTP a la ip y puerto sacados del sdp EL MEDIO INDICADO
+            Medio = miXML['audio']['path']
+            thread1 = Thread(target=Envio_RTP, args=(IP_RTP,P_RTP,Medio,))
+            # Escucha del medio por VLC
+            thread2 = Thread(target=Escucha_VLC, args=(IP_RTP,P_RTP,))
+            # Iniciamos hilos
+            Writer_toLOG(Path_Log, "Vamos a ejecutar RTP Dirigido a" + \
+            IP_RTP + ':' + P_RTP)
+            thread1.start()
+            Writer_toLOG(Path_Log, "Envio Satisfactorio")
+            time.sleep(0.1)
+            thread2.start()
         my_socket.close()
-        miLOG.Writer(Path_Log, 'Finishing...' )
+        Writer_toLOG(Path_Log, 'Finishing...' )
     except ConnectionRefusedError:
-        miLOG.Writer(Path_Log, 'Conexion con el PROXY/REGISTER fallido' )
+        Writer_toLOG(Path_Log, 'Conexion con el PROXY/REGISTER fallido' )
         sys.exit("Conexion con el PROXY/REGISTER fallido")
