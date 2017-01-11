@@ -1,0 +1,11 @@
+Cabecera proxy:
+    Creo un metodo llamado Cabecera_Proxy que apartir del mesaje que tiene que reenviar añade en el sitio que corresponda la cabera del preoxy ayudandome de split y join
+Restablecer usuarios conectados:
+    Creo un metodo llamado json2registered con este habro el fichero de base de datos donde estan los usuarios registrados y los copio a la lista de usuarios interna esto se ejecuta cada ves que se recibe mensajes
+Integración de (c)vlc:
+    Ejecuto con os.system en comado necesario
+Integración de (c)vlc con hilos:
+    Creo el metodo Envio_RTP que ejecuta con os.system ejecuta mp32rtp este metodo se ejecutara con un hilo para ello importo de
+threading Thread 
+Hilos para el envío de audio vía RTP:
+    Creo el metodo Escucha_VLC que ejecuta con os.system el comando necesario para escuchar con vlc este metodo se ejecutara con un hilo para ello importo de threading Thread 
