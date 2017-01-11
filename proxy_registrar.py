@@ -26,18 +26,13 @@ def Writer_toLOG(f, mensaje):
 def Cabecera_Proxy(mensaje):
     """Devuelve el mensaje con la cabera proxy."""
     E = mensaje.split('\r\n')
+    header = 'Via: SIP/2.0/UDP' + ' proxy.' + miXML['server']['ip'] + ':' + \
+             miXML['server']['puerto'] + ';branch=uyvfg7236ftgu4b\r\n'
     if E[-2] == '':  # Si el mensaje no tiene cuerpo
-        E[-2] = 'Via: SIP/2.0/UDP' + \
-                ' proxy.' + miXML['server']['ip'] + ':' + \
-                miXML['server']['puerto'] + ';branch=uyvfg7236ftgu4b'
-        Nuevo_Mensaje = '\r\n'.join(E)
+        E[-2] = header
     else:
-        E[E.index('')] = 'Via: SIP/2.0/UDP' + \
-                         ' proxy.' + miXML['server']['ip'] + ':' + \
-                         miXML['server']['puerto'] + \
-                         ';branch=uyvfg7236ftgu4b\r\n'
-        M = '\r\n'.join(E)
-        Nuevo_Mensaje = M + '\r\n'
+        E[E.index('')] = header
+    Nuevo_Mensaje = '\r\n'.join(E)
     return Nuevo_Mensaje
 
 
@@ -75,8 +70,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 
     def handle(self):
         """Handle Register/Proxy SIP."""
-        # self.json2registered()
-        # self.expiration()
+        self.json2registered()
+        self.expiration()
         Ip_emisor = str(self.client_address[0])
         P_emisor = str(self.client_address[1])
         line = self.rfile.read()
@@ -159,6 +154,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 if user[0] == Dir_SIP:
                     self.clientes.remove(user)
             self.clientes.append(client)
+        print('Lista clientes registrados')
         print(self.clientes)
 
     def Client_Registrado(self, mensaje):
@@ -180,7 +176,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         if len(data.split(' ')) <= 4:
             # Si es el primer Register pedimos autentificacion
             nonce = str(random.randint(1, 89898989879))
-            Cabecera = 'WWW Authenticate: Digest nonce="' + nonce + '"'
+            Cabecera = 'WWW-Authenticate: Digest nonce="' + nonce + '"'
             Writer_toLOG(Path_Log, 'Send to ' + Ip_emisor + ':' + P_emisor +
                          ': ' + 'SIP/2.0 401 Unauthorized ' + Cabecera)
             self.wfile.write(b"SIP/2.0 401 Unauthorized\r\n" +

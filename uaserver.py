@@ -114,8 +114,7 @@ class ServerHandler(socketserver.DatagramRequestHandler):
                 Writer_toLOG(Path_Log, "Vamos a ejecutar RTP Dirigido a" +
                              IP_RTP + ':' + P_RTP)
                 thread1.start()
-                Writer_toLOG(Path_Log, "Envio Satisfactorio")
-                time.sleep(0.15)
+                time.sleep(0.1)
                 thread2.start()
                 self.Rtp.clear()
             else:

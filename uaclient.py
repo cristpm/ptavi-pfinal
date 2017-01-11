@@ -34,6 +34,8 @@ if __name__ == "__main__":
         sys.exit("Usage: python uaclient.py config method option")
 
     Sip = miXML['acount']['username']
+    IP = miXML['uaserver']['ip']
+    PE = miXML['uaserver']['puerto']
     IP_Proxy = miXML['regproxy']['ip']
     PORT_Proxy = miXML['regproxy']['puerto']
 
@@ -105,8 +107,7 @@ if __name__ == "__main__":
             Writer_toLOG(Path_Log, "Vamos a ejecutar RTP Dirigido a" +
                          IP_RTP + ':' + P_RTP)
             thread1.start()
-            Writer_toLOG(Path_Log, "Envio Satisfactorio")
-            time.sleep(0.15)
+            time.sleep(0.1)
             thread2.start()
         my_socket.close()
         Writer_toLOG(Path_Log, 'Finishing...')
